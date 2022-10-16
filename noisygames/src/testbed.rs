@@ -1,4 +1,5 @@
 use crate::game::Game;
+use crate::noisemodels::*; 
 use std::clone::Clone;
 use serde::Serialize;
 use crate::Strategies;
@@ -14,13 +15,15 @@ pub struct Config<T, U> {
     pub num_rounds: usize,
     pub num_round_lengths: Vec<i32>,
     pub location: String,
+    pub noisemodel : BaseNoiseModel,
 }
 
 pub fn generate_round_robin_configs (
     game: Game,
     players: Vec<Strategies>,
     round_lengths: Vec<i32>,
-    location: String ) 
+    location: String,
+    noise: BaseNoiseModel ) 
     -> Vec<Config<Strategies,Strategies>> 
 {
     //then create all the configs
@@ -37,6 +40,7 @@ pub fn generate_round_robin_configs (
                 num_rounds: round_lengths.len(),
                 num_round_lengths: round_lengths.clone(),
                 location: location.to_string().clone(),
+                noisemodel: noise.clone(),
             };
 
             configs.push(tmp_cfg);
@@ -53,10 +57,8 @@ pub fn generate_players (
 {
     let mut players = Vec::new();
     for i in 0..num_strats.len() {
-        for _ in 0..num_strats[i] { 
             let idx = i % 4; // edited for the purpose of timing program, TODO recommend changeing in final product
             players.push(strat_types[idx].clone());
-        }
     }
     players
 }

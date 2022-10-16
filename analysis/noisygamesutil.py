@@ -12,6 +12,7 @@ def load_matchup_files(players_struct,player,matchup):
     return rounds
 
 def build_players_struct(base_dir):
+    print(base_dir)   
     #first I need to figure out what all the folders are
     player_folders=listdir(base_dir)
     #from that, parse and figure out how many players there are

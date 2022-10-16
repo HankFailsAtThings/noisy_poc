@@ -1,7 +1,8 @@
 pub mod player;
+pub mod noisemodels; // 
+use crate::noisemodels::*; // why does this need to happen? 
 use crate::player::*;
 pub mod testbed;
-
 pub mod game;
 pub mod test_utilities;
 use crate::testbed::Config;
@@ -10,6 +11,8 @@ use std::env;
 use std::fs;
 use serde::Serialize;
 use threadpool::ThreadPool;
+use redis::*;
+
 
 
 #[derive(Clone,Serialize)]
@@ -44,14 +47,18 @@ impl Strategy for Strategies {
 fn main() {
     
     let args: Vec<String> = env::args().collect();
-    let mut dirstr = test_utilities::build_datetime_folder("/tmp/test_runs/".to_string());
-    if args.len() > 1 {
-    	dirstr = test_utilities::build_datetime_folder(args[1].clone().to_string());
+    let mut basedirstr;
+    if args.len()  < 2 {
+        basedirstr = test_utilities::build_datetime_folder("/tmp/test_runs/".to_string());
     }
-    let num_players = 128 - 1; 
+    else {
+    	basedirstr = test_utilities::build_datetime_folder(args[1].clone().to_string());
+    }
+    println!("{}", basedirstr);
+    let num_players = 100 - 1;
     //let num_strategies = vec![2, 2, 2, 2];
     let mut num_strategies = vec![2];
-    for _i in 0..num_players { // edited for the purpose of timing program, TODO recommend changeing in final product
+    for _i in 0..num_players { 
     	num_strategies.push(2);
     }
     println!("{}", num_strategies.len());
@@ -82,6 +89,7 @@ fn main() {
     let titfortat_tmp = TitForTat { play: base_player.clone() };
     let randomdefect_tmp = RandomDefect { play: base_player.clone(), probability: 0.5 };
 
+
     let a_strat = Strategies::AlwaysDefect{ player: alwaysdefect_tmp };
     let b_strat = Strategies::GrimTrigger{ player: grimtrigger_tmp };
     let c_strat = Strategies::TitForTat{ player: titfortat_tmp };
@@ -92,57 +100,58 @@ fn main() {
         c_strat,
         d_strat,
     ];
-    let players = testbed::generate_players(strat_types, num_strategies);
-    let configs = testbed::generate_round_robin_configs(
-        g, players, round_lengths, dirstr );
+  
+    let players = testbed::generate_players(strat_types, num_strategies); 
+
+    // automate running configs at different noise level
+    let num_runs = 5;
+    let noise_vec = vec![100, 99, 95, 90, 85];
+    for run in 0..num_runs {
+        let idx = run % noise_vec.len();
+        let noise = BaseNoiseModel::new(noise_vec[idx]);
+        println!("run {0}, noise {1}", run, noise_vec[idx]) ;
+        let dirstr = format!("{0}{1}{2}" , basedirstr, "_run_", run);
+        let mut configs = testbed::generate_round_robin_configs(
+            g.clone(), players.clone(), round_lengths.clone(), dirstr , noise );
+        run_multithreaded_configs_threadpool(configs);
+    }
     
-    run_multithreaded_configs_threadpool(configs);
 }
 
 
 fn run_multithreaded_configs_threadpool(mut configs: Vec<Config<Strategies,Strategies>>){
-    let num_workers = 30;
+
+    let num_workers = 30; 
     let pool = ThreadPool::new(num_workers);
-    
+  
     //run configs through the pool, record_config saves results
     for _idx in 0..configs.len() {
 
-        //let tx = tx.clone();
         let tmp_config = configs.pop().unwrap();
-	pool.execute(move || {
-            //pool_job(tmp_config);
+	        pool.execute(move || {
             let out_configs = run_instance(tmp_config);
             record_configs(out_configs);
-            //tx.send(1).expect("panic during threadpool execution");          
         });
     }
-    //assert_eq!(rx.iter().take(configs.len()).fold(0, |a,b| a+b), configs.len());
     pool.join();
 }
 
 
-/*
-fn run_multithreaded_configs(mut configs: Vec<Config<Strategies,Strategies>>){
-
-    let mut threads = Vec::new();
-    //then run all the configs and save them off
-    for idx in 0..configs.len() {
-
-        println!("Running thread {}", idx);
-        let tmp_config = configs.pop().unwrap();
-        let thread = thread::spawn(move || {
-            let out_configs = run_instance(tmp_config);
-            record_configs(out_configs);
-        });
-
-        threads.push(thread);
-    }
-
-    //go through all threads and join
-    for thread in threads {
-        thread.join().unwrap()
-    }
-} */
+// Note: redis is an in memory db only 
+fn record_configs_db<T:Serialize,U:Serialize>(configs: Vec<Config<T,U>>) {
+        let client = redis::Client::open("redis://127.0.0.1/").expect("failed to open redis");
+        let mut con = client.get_connection().expect("failed to connect to redis");
+        for idx in 0..configs.len() {
+                for round in 0..configs[idx].num_round_lengths.len() {
+                        //make Key noise_playerA_playerB_roundnum
+                        let key = format!("{}_{}_{}_{}_{}", &configs[idx].noisemodel.chance, &configs[idx].player_a_num, &configs[idx].player_b_num, &configs[idx].num_rounds, &configs[idx].num_round_lengths[round]);
+                        let json = serde_json::to_string(&configs[idx]).unwrap();
+                        let _: () = redis::cmd("SET").arg(key).arg(json).query(&mut con).expect("failed to set 'json'");
+                
+                }
+             
+        }
+}
 
 fn record_configs<T:Serialize,U:Serialize>(configs: Vec<Config<T,U>>) {
     let s = &configs[0].location;
@@ -163,14 +172,20 @@ fn record_configs<T:Serialize,U:Serialize>(configs: Vec<Config<T,U>>) {
 
 fn run_instance<T: Strategy+Clone, U: Strategy+Clone>(config: Config<T, U>) -> Vec<Config<T, U>> {
     let mut configs = Vec::new();
+    
+    
 
     for idx in 0..config.num_rounds {
         
         let mut tmp_cfg = config.clone();
         
         for _ in 0..config.num_round_lengths[idx] {
-            let move_a = tmp_cfg.player_a.strategy();
-            let move_b = tmp_cfg.player_b.strategy();
+            let mut move_a = tmp_cfg.player_a.strategy();
+            let mut move_b = tmp_cfg.player_b.strategy();
+
+            // here we introduce game noise
+            move_a = tmp_cfg.noisemodel.modify(move_a); 
+            move_b = tmp_cfg.noisemodel.modify(move_b); 
 
             let moves_a = (move_a.clone(), move_b.clone());
             let moves_b = (move_b.clone(), move_a.clone());
@@ -183,6 +198,9 @@ fn run_instance<T: Strategy+Clone, U: Strategy+Clone>(config: Config<T, U>) -> V
             let tmp_b = tmp_cfg.player_b.get_player();
             tmp_a.read_mv(moves_a, outcome_a);
             tmp_b.read_mv(moves_b, outcome_b);
+
+            
+
         }
         configs.push(tmp_cfg);
     }

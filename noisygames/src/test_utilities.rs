@@ -12,9 +12,8 @@ pub fn build_datetime_folder(argument : String) -> String {
         now.minute(),
         now.second(),
         );
-    //let dirstr = format!("{}{}","/home/kennethmclarney/Documents/RustProjects/noisygames/test_runs/",s);
     let dirstr = format!("{}{}",argument,s);
 
-    fs::create_dir_all(&dirstr).expect("Directory unable to be created");
+//    fs::create_dir_all(&dirstr).expect("Directory unable to be created");
     dirstr
 }

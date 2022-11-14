@@ -11,7 +11,7 @@ use std::env;
 use std::fs;
 use serde::Serialize;
 use threadpool::ThreadPool;
-use redis::*;
+//use redis::*;
 
 
 
@@ -21,6 +21,7 @@ pub enum Strategies {
     GrimTrigger{player: GrimTrigger},
     TitForTat{player: TitForTat},
     RandomDefect{player: RandomDefect},
+    TitForAverageTat{player: TitForAverageTat},
 }
 
 impl Strategy for Strategies {
@@ -30,6 +31,7 @@ impl Strategy for Strategies {
             Strategies::GrimTrigger{ player } => player.strategy(),
             Strategies::TitForTat{ player } => player.strategy(),
             Strategies::RandomDefect{ player } => player.strategy(),
+            Strategies::TitForAverageTat{ player } => player.strategy(),
         }
     }
 
@@ -39,6 +41,7 @@ impl Strategy for Strategies {
             Strategies::GrimTrigger{ player } => player.get_player(),
             Strategies::TitForTat{ player } => player.get_player(),
             Strategies::RandomDefect{ player } => player.get_player(),
+            Strategies::TitForAverageTat{ player } => player.get_player(),
         }
     }
 }
@@ -88,17 +91,20 @@ fn main() {
     let grimtrigger_tmp = GrimTrigger { play: base_player.clone() };
     let titfortat_tmp = TitForTat { play: base_player.clone() };
     let randomdefect_tmp = RandomDefect { play: base_player.clone(), probability: 0.5 };
+    let titforaveragetat_tmp = TitForAverageTat { play: base_player.clone() };
 
 
     let a_strat = Strategies::AlwaysDefect{ player: alwaysdefect_tmp };
     let b_strat = Strategies::GrimTrigger{ player: grimtrigger_tmp };
     let c_strat = Strategies::TitForTat{ player: titfortat_tmp };
     let d_strat = Strategies::RandomDefect{ player: randomdefect_tmp };
+    let f_strat = Strategies::TitForAverageTat{ player: titforaveragetat_tmp };
     let strat_types = vec![
         a_strat,
         b_strat,
         c_strat,
         d_strat,
+        f_strat,
     ];
   
     let players = testbed::generate_players(strat_types, num_strategies); 
@@ -138,20 +144,20 @@ fn run_multithreaded_configs_threadpool(mut configs: Vec<Config<Strategies,Strat
 
 
 // Note: redis is an in memory db only 
-fn record_configs_db<T:Serialize,U:Serialize>(configs: Vec<Config<T,U>>) {
-        let client = redis::Client::open("redis://127.0.0.1/").expect("failed to open redis");
-        let mut con = client.get_connection().expect("failed to connect to redis");
-        for idx in 0..configs.len() {
-                for round in 0..configs[idx].num_round_lengths.len() {
-                        //make Key noise_playerA_playerB_roundnum
-                        let key = format!("{}_{}_{}_{}_{}", &configs[idx].noisemodel.chance, &configs[idx].player_a_num, &configs[idx].player_b_num, &configs[idx].num_rounds, &configs[idx].num_round_lengths[round]);
-                        let json = serde_json::to_string(&configs[idx]).unwrap();
-                        let _: () = redis::cmd("SET").arg(key).arg(json).query(&mut con).expect("failed to set 'json'");
-                
-                }
-             
-        }
-}
+// fn record_configs_db<T:Serialize,U:Serialize>(configs: Vec<Config<T,U>>) {
+//         let client = redis::Client::open("redis://127.0.0.1/").expect("failed to open redis");
+//         let mut con = client.get_connection().expect("failed to connect to redis");
+//         for idx in 0..configs.len() {
+//                 for round in 0..configs[idx].num_round_lengths.len() {
+//                         //make Key noise_playerA_playerB_roundnum
+//                         let key = format!("{}_{}_{}_{}_{}", &configs[idx].noisemodel.chance, &configs[idx].player_a_num, &configs[idx].player_b_num, &configs[idx].num_rounds, &configs[idx].num_round_lengths[round]);
+//                         let json = serde_json::to_string(&configs[idx]).unwrap();
+//                         let _: () = redis::cmd("SET").arg(key).arg(json).query(&mut con).expect("failed to set 'json'");
+//                 
+//                 }
+//              
+//         }
+// }
 
 fn record_configs<T:Serialize,U:Serialize>(configs: Vec<Config<T,U>>) {
     let s = &configs[0].location;

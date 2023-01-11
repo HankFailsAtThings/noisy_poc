@@ -1,6 +1,8 @@
 use std::clone::Clone;
 use serde::Serialize;
 
+
+
 #[derive(Clone,Serialize)]
 pub struct BasicPlayer {
     pub name: String,
@@ -80,8 +82,9 @@ impl Player for BasicPlayer {
 
 
 pub trait Strategy {
-	fn strategy(&self) -> i32;
-    fn get_player(&mut self) -> &mut BasicPlayer;
+	fn strategy(&mut self) -> i32; // mut is required for strats that update their internal state 
+        fn get_strategy(&self) -> String; 
+        fn get_player(&mut self) -> &mut BasicPlayer;
 }
 
 #[derive(Clone,Serialize)]
@@ -90,7 +93,7 @@ pub struct TitForTat {
 }
 
 impl Strategy for TitForTat {
-	fn strategy(&self) -> i32 {
+	fn strategy(&mut self) -> i32 {
 		let their_moves = &self.play.get_their_moves();
 		if their_moves.len() > 0 {
 			their_moves.last().unwrap().clone()
@@ -99,6 +102,10 @@ impl Strategy for TitForTat {
 		}
 	}
 
+    fn get_strategy(&self) -> String {
+        "TitForTat".to_string()
+    }
+
     fn get_player(&mut self) -> &mut BasicPlayer {
         &mut self.play
     }
@@ -106,20 +113,30 @@ impl Strategy for TitForTat {
 #[derive(Clone,Serialize)]
 pub struct GrimTrigger {
 	pub play: BasicPlayer,
+        pub trig: bool
 }
 
 impl Strategy for GrimTrigger {
-	fn strategy(&self) -> i32 {
+	fn strategy(&mut self) -> i32 {
+                if self.trig {
+                        return 1; 
+                }
+
 		let their_moves = &self.play.get_their_moves();
-		if their_moves.len() == 0 {
+		if their_moves.len() == 0 { 
 			0
 		} else if their_moves.last().unwrap().clone() == 0 {
 			0
 		}
 		else {
+                        self.trig = true;
 			1
 		}
 	}
+
+    fn get_strategy(&self) -> String {
+        "GrimTrigger".to_string()
+    }
 
     fn get_player(&mut self) -> &mut BasicPlayer {
         &mut self.play
@@ -132,9 +149,13 @@ pub struct AlwaysDefect {
 }
 
 impl Strategy for AlwaysDefect {
-	fn strategy(&self) -> i32 {
+	fn strategy(&mut self) -> i32 {
 		1
 	}
+
+    fn get_strategy(&self) -> String {
+        "AlwaysDefect".to_string()
+    }
     
     fn get_player(&mut self) -> &mut BasicPlayer {
         &mut self.play
@@ -150,13 +171,17 @@ pub struct RandomDefect {
 use rand::Rng;
 
 impl Strategy for RandomDefect {
-    fn strategy(&self) -> i32 {
+    fn strategy(&mut self) -> i32 {
         let num: f32 = rand::thread_rng().gen_range(0..=100) as f32;
         if 100.0 * self.probability > num {
             1
         } else {
             0
         }
+    }
+
+    fn get_strategy(&self) -> String {
+        "RandomDefect".to_string()
     }
     
     fn get_player(&mut self) -> &mut BasicPlayer {
@@ -167,6 +192,7 @@ impl Strategy for RandomDefect {
 #[derive(Clone,Serialize)]
 pub struct TitForAverageTat {
     pub play: BasicPlayer,
+    pub memory : i32
 }
 
 impl TitForAverageTat {
@@ -182,10 +208,8 @@ impl TitForAverageTat {
 }
 
 
-// this player plays the average of its opponents last ten moves 
-impl Strategy for TitForAverageTat {
-
-        fn strategy(&self) -> i32 {
+// I think I can do this more efficiently , saving old for now 
+/*
                 let their_moves = &self.play.get_their_moves();
                 let len_usize = their_moves.len();
                 let len = len_usize as i32; // cause usize
@@ -219,6 +243,53 @@ impl Strategy for TitForAverageTat {
                         0
                 }
                 
+*/
+
+
+// this player plays the average of its opponents last ten moves 
+impl Strategy for TitForAverageTat {
+
+        fn strategy(&mut self) -> i32 {
+                //let their_move = &self.play.get_their_moves().last().unwrap();
+                let their_moves = &self.play.get_their_moves();
+                if their_moves.len() == 0 {
+                        return 0;
+                }
+                let their_move = their_moves.last().unwrap().clone();             
+                //let their_move = their_moves.last();             
+                // we are going to add if the other player cooperates and sub if the other player defects
+                //      staying in the range -5 <= i < 5 , if neg, defect, if pos  or 0 coop 
+                let mut subbed = false; 
+                if their_move == 0 { // they co-op'd 
+                        self.memory += 1; 
+                }
+                else {
+                        self.memory -= 1; 
+                        subbed = true; 
+                }
+                //println!("TitForAverageTat : strat play , memory is currently {:?}, opponent played {:?} ", self.memory, their_move ); 
+                if self.memory*self.memory > 25 {
+                        // reset 
+                        if subbed {
+                                // add
+                                self.memory += 1;
+                        }
+                        else {
+                                self.memory -= 1;
+                        }
+                }                 
+               // println!("TitForAverageTat : strat play2,  memory is currently {:?}, subbbed is {:?}", self.memory, subbed);
+                if self.memory < 0 { // defect 
+                        1 
+                } 
+                else { 
+                        0
+                }
+                
+                
+        }
+        fn get_strategy(&self) -> String {
+                "TitForAverageTat".to_string()
         }
        
         fn get_player(&mut self) -> &mut BasicPlayer {

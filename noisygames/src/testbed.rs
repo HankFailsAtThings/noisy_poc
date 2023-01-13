@@ -52,7 +52,7 @@ pub fn generate_round_robin_configs (
     configs
 }
 
-pub fn generate_axelrod_configs ( 
+pub fn generate_knockout_configs ( 
     game: Game,
     mut players: Vec<Strategies>,
     round_lengths: Vec<i32>,
@@ -85,7 +85,7 @@ pub fn generate_axelrod_configs (
 }
 
 
-pub fn generate_players_by_numbers(strat_types: Vec<Strategies>, num_strats: Vec<i32>) -> Vec<Strategies> {
+pub fn generate_players_by_numbers(strat_types: &Vec<Strategies>, num_strats: Vec<i32>) -> Vec<Strategies> {
         let mut players = Vec::new();
         for i in 0..strat_types.len() {
             for _j in 0..num_strats[i] {

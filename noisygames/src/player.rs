@@ -195,7 +195,7 @@ pub struct TitForAverageTat {
     pub memory : i32
 }
 
-impl TitForAverageTat {
+/*impl TitForAverageTat {
         fn take_average(&self, slice : &[i32], len : usize) -> f32 {
                  let mut sum = 0.0; 
                  let floatLen = len as f32;
@@ -205,45 +205,7 @@ impl TitForAverageTat {
                  } 
                  sum / floatLen
         }
-}
-
-
-// I think I can do this more efficiently , saving old for now 
-/*
-                let their_moves = &self.play.get_their_moves();
-                let len_usize = their_moves.len();
-                let len = len_usize as i32; // cause usize
-                
-                if len == 0 { // coop first turn
-                        return 0;
-                }
-                
-                let cut = len - 10;
-                let mut avg = 0.0; 
-                // slice the last ten moves off
-                if cut > 0  {
-                        let slice = &their_moves[len_usize - 10 ..];
-                        
-                        // take avg
-                        avg = self.take_average(slice, 10);                      
-              //          println!("len =  {:?} , avg  {:?}, slice {:?}" , len, avg, slice);                        
-                }
-                else {
-                        //take average
-                        avg = self.take_average(&their_moves[..], len_usize);
-                        //println!("len =  {:?} , avg  {:?}, slice {:?}" , len, avg, &their_moves[..]);                        
-                }
-                
-                if avg > 0.5 {
-                //        println!("avg = {:?} , chose 1", avg);
-                        1        
-                }
-                else {
-                //        println!("avg = {:?} , chose 0", avg);
-                        0
-                }
-                
-*/
+} */
 
 
 // this player plays the average of its opponents last ten moves 

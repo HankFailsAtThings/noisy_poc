@@ -1,0 +1,19 @@
+
+	Goal
+		Recreate evolution of competition paper but under the basic noise model 
+
+	we need to build succesive round robin tourny that 
+		"the strategies in the second round 
+			were submitted to a hypothetical next
+			round in proportion to its success in the
+			previous round"	
+
+// interesting 
+	under a 10% noise , titforavgtat stays alive for much longer than normal TfT , thought all D still dominates
+
+
+
+
+
+// refs 
+http://www-personal.umich.edu/~axe/research/Axelrod%20and%20Hamilton%20EC%201981.pdf

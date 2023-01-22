@@ -81,12 +81,12 @@ fn main() {
     }
 
     println!("{}", basedirstr);
-    //let num_players = 100 - 1;
-    //let mut num_strategies = vec![2, 2, 2, 2, 2];
-    let mut num_strategies = vec![2000, 2000, 2000, 2000, 2000];
-    //for _i in 0..num_players { 
-    //	num_strategies.push(20);
-    //}
+    let mut num_players = 0;
+    let mut num_strategies = vec![50,50,50,50,50];
+    //let mut num_strategies = vec![2000, 2000, 2000, 2000, 2000];
+    for i in 0..num_strategies.len() { 
+	num_players = num_players + num_strategies[i];
+    }
     println!("{}", num_strategies.len());
     
     let round_lengths = vec![63, 77, 151, 151, 308];
@@ -130,8 +130,10 @@ fn main() {
         f_strat,
     ];
 
-    
-    // are we running a single round robin, or a knockout tourny 
+    //TODO, build into cmdlin arges
+    is_round_robin = false;
+    let is_iterated_round_robin = true;
+    // are we running a single round robin,  multiple round robins , or a knockout tourny 
     if is_round_robin {
         println!("running a single round robin"); 
         let players = testbed::generate_players_by_numbers(&strat_types, num_strategies); 
@@ -149,6 +151,62 @@ fn main() {
             run_round_robin(configs);
         }
     }
+    else if is_iterated_round_robin {
+	println!("running interative round robin tournament");
+	// run round , order players by score , top half of players move on 
+	// run round .. 
+        let noise_vec = vec![25,5,1, 0,100, 99, 95, 90, 85,80,75,70,65,60,55,50];
+	for idx in 0..noise_vec.len() {  // run under multi nooise model
+	println!("chance of choice staying the same %{}", noise_vec[idx]);
+	let num_rounds = 5; 
+	for _rnds in 0..num_rounds {
+		let players = testbed::generate_players_by_numbers(&strat_types, num_strategies);
+		let iterated_rr_round_lengths = vec![63];
+	        let noise = BaseNoiseModel::new(noise_vec[idx]);
+	        let dirstr = basedirstr.clone();
+	        let configs = testbed::generate_round_robin_configs(
+	            g.clone(), players.clone(), iterated_rr_round_lengths.clone(), dirstr , noise );
+	        let mut rnd_output = run_round(configs);
+		// get each player by num, add sum for each pl 
+		// 
+		#[derive(Clone)] 
+		struct StratScore {name : String , score : i32 }
+		//let next_generation : [StratScore; num_players] = [-1,num_players];
+		//cause rust arrays are useless 
+		let mut next_generation = vec![StratScore {name : String::new(), score : 0} ; num_players.try_into().unwrap()]; // woo useless error chks
+		
+	        for i in 0..rnd_output.len() {
+			let pl_a_strat = &rnd_output[i][0].player_a.get_strategy();
+	        	let pl_b_strat = &rnd_output[i][0].player_b.get_strategy();
+	        	let pl_a = &rnd_output[i][0].player_a.get_player().get_my_score();
+	        	let pl_b = &rnd_output[i][0].player_b.get_player().get_my_score();
+			let pl_a_num = &rnd_output[i][0].player_a_num;
+			let pl_b_num = &rnd_output[i][0].player_b_num;
+			//println!("{:?} {:?} {:?} {:?} {:?} {:?}", pl_a_num, pl_a, pl_a_strat, pl_b_num, pl_b, pl_b_strat);
+			// sum , TODO this is bd code
+			next_generation[*pl_a_num].score = next_generation[*pl_a_num].score + pl_a;
+			next_generation[*pl_a_num].name = pl_a_strat.to_string(); 
+			next_generation[*pl_b_num].score = next_generation[*pl_b_num].score + pl_b;	
+	        	next_generation[*pl_b_num].name = pl_b_strat.to_string(); 
+				
+		}	
+		next_generation.sort_by(|a,b| a.score.cmp(&b.score)); // things like this make me <3 new lang's
+		let mut new_strats = vec![0,0,0,0,0];
+		for i in 0..num_players/2 {	
+			let temp = next_generation.pop().unwrap().name;
+			for f in 0..strat_types.len()  {                
+	       			 if temp.eq(&strat_types[f].get_strategy()) {
+	         	      	      new_strats[f] = new_strats[f] + 2;
+	                 	}
+			}
+			//println!( "{:?} {:?} {:?}", i, temp.score, temp.name.to_string());
+		}
+		println!("{:?}", new_strats); 
+		num_strategies = new_strats;
+	}
+	}
+
+	}
     else { // is knockout
         println!("running an knockout tournament, \n Note: not fully implemented, currently only supports even player counts"); 
         // we will only have a single game of 151 iterations
@@ -193,7 +251,7 @@ fn main() {
        		 	for f in 0..strat_types.len()  {                                    
        		        		if wining_strat.eq(&strat_types[f].get_strategy()) {
        		        	         // inc new num_strat vector in the right place 
-       		         	      new_strats[f] = new_strats[f] + 2; 
+       		         	      new_strats[f] = new_strats[f] + 2;  // TODO bd ccode and u should feel bd
        		                 }
        		 	}
 

@@ -11,7 +11,7 @@ pub struct BaseNoiseModel {
 
 impl BaseNoiseModel {
         pub fn new( p : i32) -> BaseNoiseModel {
-             assert!( p > 0 && p <= 100); 
+             assert!( p >= 0 && p <= 100); 
              BaseNoiseModel {
                 name: "hellaBasic".to_string(),
                 chance: p, // p is expected to be 0 < p <= 100 

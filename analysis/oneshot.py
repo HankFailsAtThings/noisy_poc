@@ -51,7 +51,6 @@ def oneshot():
                                         
 # boged, sort by chance        
 def mysort(e):
-        print(e[1])
         return e[1]
 
 data = oneshot()

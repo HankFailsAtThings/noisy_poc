@@ -67,12 +67,18 @@ fn main() {
     
     let args: Vec<String> = env::args().collect();
     let mut is_round_robin = true; 
+    let mut is_iterated_round_robin = false;
     let mut basedirstr = test_utilities::build_datetime_folder("/tmp/test_runs/".to_string()); 
     if args.len()  > 1  {
         if args[1].eq("knockout") {
             is_round_robin = false; 
         }
-        if args.len() > 2 { // TODO is v jank
+        if args[1].eq("iterated") {
+	    is_iterated_round_robin = true;
+	    is_round_robin = false;
+	}
+	
+	if args.len() > 2 { // TODO is v jank
             basedirstr = test_utilities::build_datetime_folder(args[2].clone().to_string());
         }
         else {
@@ -82,8 +88,8 @@ fn main() {
 
     println!("{}", basedirstr);
     let mut num_players = 0;
-   // let mut num_strategies = vec![50,50,50,50,50];
-    let mut num_strategies = vec![200, 200, 200, 200, 200];
+    let mut num_strategies = vec![50,50,50,50,50];
+    //let mut num_strategies = vec![2000, 2000, 2000, 2000, 2000];
     for i in 0..num_strategies.len() { 
 	num_players = num_players + num_strategies[i];
     }
@@ -130,9 +136,6 @@ fn main() {
         f_strat,
     ];
 
-    //TODO, build into cmdlin arges
-    is_round_robin = false;
-    let is_iterated_round_robin = true;
     // are we running a single round robin,  multiple round robins , or a knockout tourny 
     if is_round_robin {
         println!("running a single round robin"); 
@@ -154,7 +157,8 @@ fn main() {
     else if is_iterated_round_robin {
 	println!("running interative round robin tournament");
 	// run round , order players by score , top half of players move on 
-        let noise_vec = vec![100,99,95,90,85,80,75,70,65,60,55,50,45,40,35,30,25,20,15,10,5,0];	
+        //let noise_vec = vec![100,99,95,90,85,80,75,70,65,60,55,50,45,40,35,30,25,20,15,10,5,0];	
+        let noise_vec = vec![100];	
         for idx in 0..noise_vec.len() {  // run under multi nooise model
         	println!("Start {:?}", num_strategies); 
                 let mut temp_strats = num_strategies.clone();
@@ -191,10 +195,13 @@ fn main() {
         		}	
         		next_generation.sort_by(|a,b| a.score.cmp(&b.score)); // things like this make me <3 new lang's
         		let mut new_strats = vec![0,0,0,0,0];
-        		for i in 0..num_players/2 {	
-        			let temp = next_generation.pop().unwrap().name;
+        		for i in 0..num_players/2 {
+				let temp = next_generation.pop().unwrap();	
+        			//let temp = next_generation.pop().unwrap().name;
+				//println!("{:?} {:?}", temp.name, temp.score);
+				//TODO maybe the median method is bad, at 100% TfAvgT wins when it should be identical to tft, seems to be how the sorting alg put tfAvgt > tft when all scores are equal
         			for f in 0..strat_types.len()  {                
-        	       			 if temp.eq(&strat_types[f].get_strategy()) {
+        	       			 if temp.name.eq(&strat_types[f].get_strategy()) {
         	         	      	      new_strats[f] = new_strats[f] + 2;
         	                 	}
         			}

@@ -87,13 +87,12 @@ fn main() {
     }
 
     println!("{}", basedirstr);
+    let mut num_strategies = vec![100,100,100,100,100];
+//    let mut num_strategies = vec![1000, 1000, 1000, 1000, 1000];
     let mut num_players = 0;
-    let mut num_strategies = vec![50,50,50,50,50];
-    //let mut num_strategies = vec![2000, 2000, 2000, 2000, 2000];
-    for i in 0..num_strategies.len() { 
+    for i in 0..num_strategies.len() {
 	num_players = num_players + num_strategies[i];
     }
-    println!("{}", num_strategies.len());
     
     let round_lengths = vec![63, 77, 151, 151, 308];
     
@@ -158,40 +157,38 @@ fn main() {
 	println!("running interative round robin tournament");
 	// run round , order players by score , top half of players move on 
         //let noise_vec = vec![100,99,95,90,85,80,75,70,65,60,55,50,45,40,35,30,25,20,15,10,5,0];	
-        let noise_vec = vec![100];	
+        let noise_vec = vec![100,95,75,50];	
         for idx in 0..noise_vec.len() {  // run under multi nooise model
-        	println!("Start {:?}", num_strategies); 
                 let mut temp_strats = num_strategies.clone();
         	println!("{}", noise_vec[idx]);
         	let num_rounds = 4; 
         	for _rnds in 0..num_rounds {
-        	//	println!("Start {:?}", temp_strats); 
         		let players = testbed::generate_players_by_numbers(&strat_types, temp_strats);
+
         		let iterated_rr_round_lengths = vec![151];
         	        let noise = BaseNoiseModel::new(noise_vec[idx]);
         	        let dirstr = basedirstr.clone();
-        	        let configs = testbed::generate_round_robin_configs(
-        	            g.clone(), players.clone(), iterated_rr_round_lengths.clone(), dirstr , noise );
+			// TODO this is a lot of memory useage for large player counts, O(N!), have to batch process the player generation, game playing, would require large rewrites, or we could just download more ram
+        	        let configs = testbed::generate_round_robin_configs(g.clone(), players, iterated_rr_round_lengths, dirstr , noise );
         	        let mut rnd_output = run_round(configs);
         		#[derive(Clone)] 
         		struct StratScore {name : String , score : i32 }
-        		//let next_generation : [StratScore; num_players] = [-1,num_players];
-        		//cause rust arrays are useless 
         		let mut next_generation = vec![StratScore {name : String::new(), score : 0} ; num_players.try_into().unwrap()]; // woo useless error chks
         		
-        	        for i in 0..rnd_output.len() {
-        			let pl_a_strat = &rnd_output[i][0].player_a.get_strategy();
-        	        	let pl_b_strat = &rnd_output[i][0].player_b.get_strategy();
-        	        	let pl_a = &rnd_output[i][0].player_a.get_player().get_my_score();
-        	        	let pl_b = &rnd_output[i][0].player_b.get_player().get_my_score();
-        			let pl_a_num = &rnd_output[i][0].player_a_num;
-        			let pl_b_num = &rnd_output[i][0].player_b_num;
-        			// sum , TODO this is bd code
-        			next_generation[*pl_a_num].score = next_generation[*pl_a_num].score + pl_a;
-        			next_generation[*pl_a_num].name = pl_a_strat.to_string(); 
-        			next_generation[*pl_b_num].score = next_generation[*pl_b_num].score + pl_b;	
-        	        	next_generation[*pl_b_num].name = pl_b_strat.to_string(); 
-        				
+        	        for _i in 0..rnd_output.len() {
+				let game = &mut rnd_output.pop().unwrap();
+				
+				let pl_a_strat = game[0].player_a.get_strategy();
+                        	let pl_b_strat = game[0].player_b.get_strategy();
+                        	let pl_a = game[0].player_a.get_player().get_my_score().clone();
+                        	let pl_b = game[0].player_b.get_player().get_my_score().clone();
+                        	let pl_a_num = game[0].player_a_num;
+                        	let pl_b_num = game[0].player_b_num;
+                        	next_generation[pl_a_num].score = next_generation[pl_a_num].score + pl_a;
+                        	next_generation[pl_a_num].name = pl_a_strat.to_string(); 
+                        	next_generation[pl_b_num].score = next_generation[pl_b_num].score + pl_b;	
+                        	next_generation[pl_b_num].name = pl_b_strat.to_string(); 
+
         		}	
         		next_generation.sort_by(|a,b| a.score.cmp(&b.score)); // things like this make me <3 new lang's
         		let mut new_strats = vec![0,0,0,0,0];
@@ -199,7 +196,7 @@ fn main() {
 				let temp = next_generation.pop().unwrap();	
         			//let temp = next_generation.pop().unwrap().name;
 				//println!("{:?} {:?}", temp.name, temp.score);
-				//TODO maybe the median method is bad, at 100% TfAvgT wins when it should be identical to tft, seems to be how the sorting alg put tfAvgt > tft when all scores are equal
+				//TODO maybe the median method is bad, at 100% TfAvgT wins when it should be identical to tft, seems to be how the sorting alg put tfAvgt > tft when scores are equal
         			for f in 0..strat_types.len()  {                
         	       			 if temp.name.eq(&strat_types[f].get_strategy()) {
         	         	      	      new_strats[f] = new_strats[f] + 2;
@@ -281,8 +278,8 @@ fn main() {
 
 fn run_round(mut configs: Vec<Config<Strategies,Strategies>>) -> Vec<Vec<Config<Strategies,Strategies>>> {
 
-    let num_workers = 30;
-    let pool = ThreadPool::new(num_workers);
+    let pool = ThreadPool::new(30);
+
     // gonna need some locks
     let round_results : Vec<Vec<Config<Strategies,Strategies>>> = Vec::new(); 
     let round_results_mutex = Arc::new(Mutex::new(round_results)); 

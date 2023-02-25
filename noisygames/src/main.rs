@@ -87,14 +87,15 @@ fn main() {
     }
 
     println!("{}", basedirstr);
-    let mut num_strategies = vec![100,100,100,100,100];
-//    let mut num_strategies = vec![1000, 1000, 1000, 1000, 1000];
+    let mut num_strategies = vec![250,250,250,250,250];
+    //let mut num_strategies = vec![500, 500, 500, 500, 500];
     let mut num_players = 0;
     for i in 0..num_strategies.len() {
 	num_players = num_players + num_strategies[i];
     }
     
-    let round_lengths = vec![63, 77, 151, 151, 308];
+    //let round_lengths = vec![63, 77, 151, 151, 308];
+    let round_lengths = vec![151];
     
     //potential strategies for now are always defect, tit for tat, and grim trigger
     let a_mtx = vec![
@@ -141,9 +142,8 @@ fn main() {
         let players = testbed::generate_players_by_numbers(&strat_types, num_strategies); 
         
         // automate running configs at different noise level
-        let num_runs = 5;
-        let noise_vec = vec![100, 99, 95, 90, 85];
-        for run in 0..num_runs {
+        let noise_vec = vec![100, 99, 95, 90, 85,80,75,70,65,60,55,50,45,40,35,30,25,20,15,10,5,0];
+        for run in 0..noise_vec.len() {
             let idx = run % noise_vec.len();
             println!("run {0}, noise {1}", run, noise_vec[idx]) ;
             let noise = BaseNoiseModel::new(noise_vec[idx]);
@@ -156,8 +156,8 @@ fn main() {
     else if is_iterated_round_robin {
 	println!("running interative round robin tournament");
 	// run round , order players by score , top half of players move on 
-        //let noise_vec = vec![100,99,95,90,85,80,75,70,65,60,55,50,45,40,35,30,25,20,15,10,5,0];	
-        let noise_vec = vec![100,95,75,50];	
+        let noise_vec = vec![100,99,95,90,85,80,75,70,65,60,55,50,45,40,35,30,25,20,15,10,5,0];	
+        //let noise_vec = vec![100,95,75,50];	
         for idx in 0..noise_vec.len() {  // run under multi nooise model
                 let mut temp_strats = num_strategies.clone();
         	println!("{}", noise_vec[idx]);

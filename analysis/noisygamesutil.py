@@ -1,9 +1,9 @@
 import json
 from os import listdir
+import re
 
 def load_matchup_files(players_struct,player,matchup):
     round_files = players_struct[player][matchup]
-    
     rounds = []
     for rnd in round_files:
         f = open(rnd)
@@ -12,6 +12,7 @@ def load_matchup_files(players_struct,player,matchup):
     return rounds
 
 def build_players_struct(base_dir):
+    # python regex are the dumbest thing ever implemented
     print(base_dir)   
     #first I need to figure out what all the folders are
     player_folders=listdir(base_dir)
@@ -33,7 +34,14 @@ def build_players_struct(base_dir):
     for player in players:
         players_struct[player] = {}
         for fldr in player_folders:
-            if player in fldr:
+            #shitty hack
+            is_in = False
+            spl = fldr.split('p')
+            for tok in spl:
+                if player[1:] in tok and len(player[1:]) == len(tok):
+                    is_in = True
+            #end shitty hack 
+            if is_in:
                 round_folders = listdir(base_dir+fldr)
                 players_struct[player][fldr] = []
                 for rnd in round_folders:

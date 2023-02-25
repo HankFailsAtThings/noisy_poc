@@ -4,6 +4,7 @@ from os import listdir
 from noisygamesutil import *
 import matplotlib.pyplot as plt
 
+
 #basebasedir = '/home/henry/runs/run2_10players' # small dataset for testing this script
 #basebasedir = '/home/henry/runs/run1_1000players' 
 #basebasedir  = '/home/henry/runs/run3_100player'
@@ -11,7 +12,15 @@ import matplotlib.pyplot as plt
 #basebasedir  = '/home/henry/runs/run5_100player'
 #basebasedir  = '/home/henry/runs/titforAvgTat/run1_100player'
 #basebasedir  = '/home/henry/runs/titforAvgTat/run2_100player'
-basebasedir = "/tmp/test_runs"
+#basebasedir = "/tmp/test_runs"
+#basebasedir = "/home/henry/runs/matchups_tfat_alldefect"
+#basebasedir = "/home/henry/runs/matchups_tfat_grimtrigger"
+#basebasedir = "/home/henry/runs/matchups_tfat_tft"
+#basebasedir = "/home/henry/runs/matchups_tfat_randomdefect"
+#basebasedir = "/home/henry/runs/matchups_tfat_tfat"
+
+basebasedir = "/home/henry/runs/testrun"
+
 
 #strat names 
 
@@ -24,36 +33,35 @@ def oneshot():
                         'GrimTrigger'           : {'sum' : 0, 'sumVsTitForAverageTat' : 0, 'sumVsGrimTrigger' : 0, 'sumVsAlwaysDefect' : 0, 'sumVsRandomDefect' : 0 , 'sumVsTitForTat' : 0, 'chance' : 0}, 
                         'AlwaysDefect'          : {'sum' : 0, 'sumVsTitForAverageTat' : 0, 'sumVsGrimTrigger' : 0, 'sumVsAlwaysDefect' : 0, 'sumVsRandomDefect' : 0 , 'sumVsTitForTat' : 0, 'chance' : 0},
                         'RandomDefect'          : {'sum' : 0, 'sumVsTitForAverageTat' : 0, 'sumVsGrimTrigger' : 0, 'sumVsAlwaysDefect' : 0, 'sumVsRandomDefect' : 0 , 'sumVsTitForTat' : 0, 'chance' : 0} }
+                #list every file 
+                print(run)
+                for match in listdir(basebasedir + "/" + run):
+                    for rnd in listdir(basebasedir + "/" + run + "/" + match):
+                        path = basebasedir + "/" + run + "/" + match + "/" + rnd
+                        f = open(path)
+                        jason = json.load(f)
+                        f.close()
+                        a_strat = list(jason['player_a'].keys())[0]
+                        b_strat = list(jason['player_b'].keys())[0]
+                        a_score = jason['player_a'][a_strat]['player']['play']['my_score']
+                        b_score = jason['player_b'][b_strat]['player']['play']['my_score']
+                        strat_sums[a_strat]['sum'] += a_score
+                        strat_sums[b_strat]['sum'] += b_score
+                        strat_sums[a_strat]["sumVs" + b_strat] += a_score
+                        strat_sums[b_strat]["sumVs" + a_strat] += b_score
+                        strat_sums[a_strat]['chance'] = jason['noisemodel']['chance']
+                        strat_sums[b_strat]['chance'] = jason['noisemodel']['chance']
+                        # print(match + " " + rnd)
+                print(strat_sums) 
+                final.append(strat_sums)
+        return final
 
-                player_struct = build_players_struct(basebasedir + "/" +  run + "/")
-                players = list(player_struct.keys())
-                # for each player collect their score by matchup 
-                for player in players:
-                        matchups = player_struct[player].keys()
-                        for matchup in matchups:
-                                rounds = load_matchup_files(player_struct,player,matchup)
-                                for rnd in rounds:
-                                        a_strat = list(rnd['player_a'].keys())[0]
-                                        b_strat = list(rnd['player_b'].keys())[0]
-                                        a_score = rnd['player_a'][a_strat]['player']['play']['my_score']
-                                        b_score = rnd['player_b'][b_strat]['player']['play']['my_score']
-                                        strat_sums[a_strat]['sum'] += a_score
-                                        strat_sums[b_strat]['sum'] += b_score
-                                        strat_sums[a_strat]["sumVs" + b_strat] += a_score
-                                        strat_sums[b_strat]["sumVs" + b_strat] += b_score
-                                        strat_sums[a_strat]['chance'] = rnd['noisemodel']['chance'] # this is prob unsafe
-                                        strat_sums[b_strat]['chance'] = rnd['noisemodel']['chance']
-                
-                final.append(strat_sums)              
-                                        
-        return final    
-                                        
-                                        
-# boged, sort by chance        
 def mysort(e):
         return e[1]
 
 data = oneshot()
+print(data) 
+
 
 TitForTat    = []  
 TitForAverageTat    = []  
@@ -75,18 +83,22 @@ AlwaysDefect.sort(key=mysort)
 RandomDefect.sort(key=mysort)
 TitForAverageTat.sort(key=mysort)
 
-#print(TitForTat,GrimTrigger,AlwaysDefect,RandomDefect,TitForAverageTat)
-y, x = zip(*TitForTat)
-print(TitForTat, y, x, type(y), type(x))
-plt.plot(x,y , 'o--y', linewidth=2, label='TitForTat', color='C0')
-y, x = zip(*GrimTrigger)
-plt.plot(x,y , 'o--y', linewidth=2, label='GrimTrigger', color='C1')
-y, x = zip(*AlwaysDefect)
-plt.plot(x,y , 'o--y', linewidth=2, label='AlwaysDefect', color='C2')
-y, x = zip(*RandomDefect)
-plt.plot(x,y , 'o--y', linewidth=2, label='RandomDefect', color='C3')
-y, x = zip(*TitForAverageTat)
-plt.plot(x,y , 'o--y', linewidth=2, label='TitForAverageTat', color='C4')
+print(TitForTat,GrimTrigger,AlwaysDefect,RandomDefect,TitForAverageTat)
+if len(TitForTat) > 0:
+	y, x = zip(*TitForTat)
+	plt.plot(x,y , 'o--y', linewidth=2, label='TitForTat', color='C0')
+if len(GrimTrigger) > 0:
+	y, x = zip(*GrimTrigger)
+	plt.plot(x,y , 'o--y', linewidth=2, label='GrimTrigger', color='C1')
+if len(AlwaysDefect) > 0:
+	y, x = zip(*AlwaysDefect)
+	plt.plot(x,y , 'o--y', linewidth=2, label='AlwaysDefect', color='C2')
+if len(RandomDefect) > 0:
+	y, x = zip(*RandomDefect)
+	plt.plot(x,y , 'o--y', linewidth=2, label='RandomDefect', color='C3')
+if len(TitForAverageTat) > 0:
+	y, x = zip(*TitForAverageTat)
+	plt.plot(x,y , 'o--y', linewidth=2, label='TitForAverageTat', color='C4')
 
 plt.gca().invert_xaxis()
 plt.legend()

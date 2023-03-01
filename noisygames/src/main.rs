@@ -14,6 +14,8 @@ use serde::Serialize;
 use threadpool::ThreadPool;
 //use redis::*;
 //use std::any::type_name;
+use rand::thread_rng;
+use rand::seq::SliceRandom;
 
 
 
@@ -87,7 +89,7 @@ fn main() {
     }
 
     println!("{}", basedirstr);
-    let mut num_strategies = vec![250,250,250,250,250];
+    let mut num_strategies = vec![0,0,100,0,100];
     //let mut num_strategies = vec![500, 500, 500, 500, 500];
     let mut num_players = 0;
     for i in 0..num_strategies.len() {
@@ -95,7 +97,7 @@ fn main() {
     }
     
     //let round_lengths = vec![63, 77, 151, 151, 308];
-    let round_lengths = vec![151];
+    let round_lengths = vec![308];
     
     //potential strategies for now are always defect, tit for tat, and grim trigger
     let a_mtx = vec![
@@ -156,12 +158,12 @@ fn main() {
     else if is_iterated_round_robin {
 	println!("running interative round robin tournament");
 	// run round , order players by score , top half of players move on 
-        let noise_vec = vec![100,99,95,90,85,80,75,70,65,60,55,50,45,40,35,30,25,20,15,10,5,0];	
-        //let noise_vec = vec![100,95,75,50];	
+        //let noise_vec = vec![100,99,95,90,85,80,75,70,65,60,55,50,45,40,35,30,25,20,15,10,5,0];	
+        let noise_vec = vec![100];	
         for idx in 0..noise_vec.len() {  // run under multi nooise model
                 let mut temp_strats = num_strategies.clone();
         	println!("{}", noise_vec[idx]);
-        	let num_rounds = 4; 
+        	let num_rounds = 10; 
         	for _rnds in 0..num_rounds {
         		let players = testbed::generate_players_by_numbers(&strat_types, temp_strats);
 
@@ -190,12 +192,28 @@ fn main() {
                         	next_generation[pl_b_num].name = pl_b_strat.to_string(); 
 
         		}	
+                        //println!("presort");
+//                        for iter in 0..next_generation.len() {
+//                                let temp = next_generation[iter].clone();
+//                                println!("{:?} {:?}", temp.name, temp.score);
+//                        }
+                       // shuffle before sorting ,, there is a reason behind this ,, if scores are equal, then rust sort maintains the order of the origal vector, this causes weird outcomes 
+                       let mut rng = thread_rng();
+        
+                        next_generation.shuffle(&mut rng);
         		next_generation.sort_by(|a,b| a.score.cmp(&b.score)); // things like this make me <3 new lang's
+                        
+//                        //println!("postsort");
+//                        for iter in 0..next_generation.len() {                              
+//                               let temp = next_generation[iter].clone();
+//                                //println!("{:?} {:?}", temp.name, temp.score);
+//                        }
+
         		let mut new_strats = vec![0,0,0,0,0];
         		for i in 0..num_players/2 {
 				let temp = next_generation.pop().unwrap();	
         			//let temp = next_generation.pop().unwrap().name;
-				//println!("{:?} {:?}", temp.name, temp.score);
+				//println!("{:?} {:?} moves on", temp.name, temp.score);
 				//TODO maybe the median method is bad, at 100% TfAvgT wins when it should be identical to tft, seems to be how the sorting alg put tfAvgt > tft when scores are equal
         			for f in 0..strat_types.len()  {                
         	       			 if temp.name.eq(&strat_types[f].get_strategy()) {
